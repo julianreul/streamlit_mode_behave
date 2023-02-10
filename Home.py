@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import time
 import os
+
+from functionality import Function
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
@@ -61,6 +62,12 @@ if uploaded_file is not None:
         
     col_names_reduced = list(set(col_names_reduced))    
 
+    choice_cols = [col for col in col_names if col.startswith("choice")]
+    #number of choice alternatives
+    alt_temp = max([int(c[7]) for c in choice_cols])+1
+    #number of equal choice alternatives
+    equal_alt_temp = max([int(c[9]) for c in choice_cols])+1
+
     with st.form(key='Selecting Columns'):
         k_temp = st.number_input(
             'How many preference/consumer groups do you want to analyze? (float values will be rounded to integers.)', 
@@ -72,24 +79,21 @@ if uploaded_file is not None:
             col_names_reduced
             )        
         
+        st.markdown("Which type of analysis do you want to conduct?")
+        
+        visual_analysis = st.checkbox("Visual analysis")
+        numeric_analysis = st.checkbox("Numeric analysis")
+        
         submit_button = st.form_submit_button(label='Confirm selection')
 
     if submit_button:
         
         st.text("Model estimation starts...")
         
-        import mode_behave_public as mb 
-     
-        choice_cols = [col for col in col_names if col.startswith("choice")]
-        #number of choice alternatives
-        alt_temp = max([int(c[7]) for c in choice_cols])+1
-        #number of equal choice alternatives
-        equal_alt_temp = max([int(c[9]) for c in choice_cols])+1
-                
         #derive param_temp and declare all attributes and random and variable.
         param_fixed = []
-        param_random = col_names_reduced
-    
+        param_random = options
+
         param_temp = {'constant': 
                           {
                            'fixed':[],
@@ -101,71 +105,48 @@ if uploaded_file is not None:
                            'random':[]
                            }
                       }
-    
+
         param_temp['variable']['fixed'] = param_fixed
-        param_temp['variable']['random'] = param_random    
-            
-        #Initialize model
-        model = mb.Core(
-            param=param_temp, 
-            data_in=dataframe, 
-            alt=alt_temp, 
-            equal_alt=equal_alt_temp
-            )
-    
-        #estimate MXL model
-        start = time.time()
-        #estimate mixed logit model
+        param_temp['variable']['random'] = param_random
+
         
-        model.estimate_mixed_logit(
-            min_iter=10, 
-            max_iter=1000,
-            tol=0.01,
-            space_method = 'abs_value',
-            scale_space = 2,
-            max_shares = 1000,
-            bits_64=True,
-            t_stats_out=False
+        function_ = Function(
+            dataframe, 
+            alt_temp, 
+            equal_alt_temp, 
+            param_temp, 
+            k_temp, 
+            numeric_analysis
             )
-        end = time.time()
-        delta = int(end-start)
-        text_temp = 'Estimation of mixed model took: ' + str(delta) + ' seconds.'
-        st.text(text_temp)
+        
+        function_.estimate_model()
+        
+        LL_MNL, LL_MXL = function_.get_likelihood()
     
         #Evaluation of MNL- and MXL-model
-        text_temp = "LL-Ratio of MNL-model: " + str(model.loglike_MNL()[0])
+        text_temp = "LL-Ratio of MNL-model: " + str(LL_MNL)
         st.text(text_temp)
-        text_temp = "LL-Ratio of MXL-model: " + str(model.loglike_MXL())
+        text_temp = "LL-Ratio of MXL-model: " + str(LL_MXL)
         st.text(text_temp)
         
-        save_fig_path_temp = PATH_HOME + sep + "data"
-    
-        k_temp = int(round(k_temp, 0))
+        #NUMERIC ANALYSIS
+        if numeric_analysis:
+            initial_point, t_stats = function_.conduct_numeric_analysis()
+            #WORK ON THE CODE BELOW: 1) Provide a human-readable table with results. 2) Implement a download button for this table.
+            st.write(initial_point)       
         
-        st.markdown("___")
-        st.header("1. Visualize parameter space")
-        
-        #visualize the preferences distribution   
-        fig_space = model.visualize_space(
-            k=k_temp, 
-            scale_individual=True, 
-            cluster_method='kmeans', 
-            external_points=np.array([model.initial_point]),
-            bw_adjust=0.03,
-            save_fig_path=save_fig_path_temp,
-            return_figure=True
-            )
-        
-        st.pyplot(fig_space)
-        
-        st.markdown("___")
-        st.header("2. Visualize simulation for each cluster")
-        
-        fig_forecast = model.forecast(method='LC', 
-                    k=k_temp,
-                    cluster_method='kmeans',
-                    name_scenario='clustering',
-                    return_figure=True
-                    )
-        
-        st.pyplot(fig_forecast)
+        #VISUAL ANALYSIS
+        if visual_analysis:
+            
+            st.markdown("___")
+            st.header("1. Visualize parameter space")
+
+            fig_space, fig_forecast = function_.conduct_visual_analysis()
+            
+            st.pyplot(fig_space)
+            
+            st.markdown("___")
+            st.header("2. Visualize simulation for each cluster")
+            
+            st.pyplot(fig_forecast)
+

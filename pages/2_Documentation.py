@@ -8,7 +8,50 @@ st.markdown("___")
 
 st.header("Discrete Choice Modelling")
 
-st.markdown("...some descriptions...")
+st.markdown(
+    """
+    **Discrete Choice Theory:**
+    Discrete choice theory is used to study the decision-making process
+    of individuals or aggregate groups.
+    The core idea of discrete choice theory is, that decision-makers choose
+    the choice alternative among a set of available choices (choice set),
+    which has the highest *utility* for the decision-maker.
+    The utility of a choice option is determined by the attributes of the 
+    choice option, the (socio-economic) attributes of the decision-maker,
+    and the importance, that a decision-maker assigns to a certain attribute. 
+    We call this importance of attributes the *preferences* of the decision-maker.
+    During the estimation of discrete choice models, those preferences
+    are elicited via optimization algorithms, based on survey data.
+    
+    **Mixed Logit:**
+    A mixed logit model is a multinomial logit model (MNL), in which the coefficients 
+    do not take a single value, but are distributed over a parameter space. 
+    Within this package, the mixed logit models 
+    are estimated on a discrete parameter space, which is specified by the researcher (nonparametric design).
+    The discrete subsets of the parameter space are called classes, 
+    analogously to latent class models (LCM). The goal of the estimation procedure
+    is to estimate the optimal share, i.e. weight, of each class within the discrete parameter space.
+    The algorithm roughly follows the procedure below:
+
+    1. Estimate initial coefficients of a standard multinomial logit model.
+    2. Specify a continuous parameter space for the random coefficients with
+       the mean and the standard deviation of each initially calculated random coefficient. 
+       (The standard deviation can be calculated from a k-fold cross-validation.)
+       Alternatively, the parameter space can be defined via the absolute values
+       of the parameters.
+    3. Draw points (maximum number of point = -max_shares-) from the parameter space via latin hypercube sampling.
+    3. Estimate the optimal share for each drawn point with an expectation-maximization (EM) algorithm. (see Train, 2009)
+
+          
+    Further reading:
+
+    * Train, K. (2009): "Mixed logit", in Discrete choice methods with simulation (pp. 76–93), Cambridge University Press
+    * Train, K. (2008): "EM algorithms for nonparametric estimation of mixing distributions", in Journal of Choice Modelling, 1(1), 40–69, https://doi.org/10.1016/S1755-5345(13)70022-8
+    * Train, K. (2016): "Mixed logit with a flexible mixing distribution", in Journal of Choice Modelling, 19, 40–53, https://doi.org/10.1016/j.jocm.2016.07.004
+    * McFadden, D. and Train, K. (2000): "Mixed MNL models for discrete response", in Journal of Applied Econometrics, 15(5), 447-470, https://www.jstor.org/stable/2678603 
+
+    """
+            )
 
 st.markdown("___")
 

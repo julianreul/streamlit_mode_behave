@@ -69,25 +69,38 @@ if uploaded_file is not None:
     equal_alt_temp = max([int(c[9]) for c in choice_cols])+1
 
     with st.form(key='Selecting Columns'):
-        k_temp = st.number_input(
-            'How many preference/consumer groups do you want to analyze? (float values will be rounded to integers.)', 
-            value=2
+        
+        st.markdown("Which type of analysis do you want to conduct?")
+
+        mnl_model = st.checkbox(
+            "Estimate Multinomial Logit Model", 
+            help = "A multinomial logit model estimates a single, average set of choice preferences for the whole base population."
             )
         
+        mxl_model = st.checkbox(
+            "Estimate nonparametric Mixed Logit Model",
+            help = "A nonparametric mixed logit model estimates 1000 preference sets (in this case) and weights them according to their relative importance in the base population."
+            )
+        consumer_groups = st.checkbox(
+            "Identify consumer groups",
+            help = "kmeans clustering is performed upon the mixed logit results to identify more homogeneous consumer/preference groups among the 1000 previously estimated preference sets.")
+
         options = st.multiselect(
             'Which attributes do you want to consider as model parameters?',
             col_names_reduced
-            )        
+            )                
         
-        st.markdown("Which type of analysis do you want to conduct?")
-        
-        visual_analysis = st.checkbox("Visual analysis")
-        numeric_analysis = st.checkbox("Numeric analysis")
+        k_temp = st.number_input(
+            'How many preference groups do you want to analyze?',
+            help = "Only relevant for mixed logit models and if consumer groups shall be identified.",
+            value=2
+            )
+
         
         submit_button = st.form_submit_button(label='Confirm selection')
 
     if submit_button:
-        
+                
         st.text("Model estimation starts...")
         
         #derive param_temp and declare all attributes and random and variable.
@@ -108,7 +121,11 @@ if uploaded_file is not None:
 
         param_temp['variable']['fixed'] = param_fixed
         param_temp['variable']['random'] = param_random
-
+        
+        if mxl_model:
+            model_type = "MXL"
+        else:
+            model_type = "MNL"
         
         function_ = Function(
             dataframe, 
@@ -116,7 +133,8 @@ if uploaded_file is not None:
             equal_alt_temp, 
             param_temp, 
             k_temp, 
-            numeric_analysis
+            True,
+            model_type
             )
         
         function_.estimate_model()
@@ -126,27 +144,48 @@ if uploaded_file is not None:
         #Evaluation of MNL- and MXL-model
         text_temp = "LL-Ratio of MNL-model: " + str(LL_MNL)
         st.text(text_temp)
-        text_temp = "LL-Ratio of MXL-model: " + str(LL_MXL)
-        st.text(text_temp)
+        if mxl_model:
+            text_temp = "LL-Ratio of MXL-model: " + str(LL_MXL)
+            st.text(text_temp)
         
-        #NUMERIC ANALYSIS
-        if numeric_analysis:
-            initial_point, t_stats = function_.conduct_numeric_analysis()
-            #WORK ON THE CODE BELOW: 1) Provide a human-readable table with results. 2) Implement a download button for this table.
-            st.write(initial_point)       
-        
-        #VISUAL ANALYSIS
-        if visual_analysis:
+        #IDENTIFY CONSUMER GROUPS
+        if consumer_groups:
+            function_.get_consumer_groups()
+                    
+        #DOWNLOAD RESULTS
+        if mxl_model:
+            logit_csv, mixed_logit_csv = function_.export_data(model_type = "MXL")
             
-            st.markdown("___")
-            st.header("1. Visualize parameter space")
-
-            fig_space, fig_forecast = function_.conduct_visual_analysis()
+            st.download_button(
+                label="Download MNL-estimates as CSV",
+                data=logit_csv,
+                file_name='MNL_estimates.csv',
+                mime='text/csv'
+                )      
             
-            st.pyplot(fig_space)
+            st.download_button(
+                label="Download MXL-estimates as CSV",
+                data=mixed_logit_csv,
+                file_name='MXL_estimates.csv',
+                mime='text/csv'
+                )     
             
-            st.markdown("___")
-            st.header("2. Visualize simulation for each cluster")
+            if consumer_groups:
+                consumer_groups_csv = function_.export_consumer_groups()    
+                
+                st.download_button(
+                    label="Download consumer groups as CSV",
+                    data=consumer_groups_csv,
+                    file_name='consumer_groups.csv',
+                    mime='text/csv'
+                    )     
             
-            st.pyplot(fig_forecast)
-
+        else:
+            logit_csv = function_.export_data(model_type = "MNL")
+            
+            st.download_button(
+                label="Download MNL-estimates as CSV",
+                data=logit_csv,
+                file_name='MNL_estimates.csv',
+                mime='text/csv'
+                )

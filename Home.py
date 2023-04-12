@@ -35,7 +35,7 @@ st.markdown("""
     """)
     
 #uploading data from local directory
-uploaded_file = st.file_uploader("Upload your survey data as .csv-files")
+uploaded_file = st.file_uploader("Upload your survey data as .csv-files", help="Have a look at the -Documentation- page for information on the correct data-format.")
 
 st.markdown("___")
 
@@ -46,9 +46,9 @@ sep = os.path.sep
 if uploaded_file is not None:
 
     try:
-        dataframe = pd.read_csv(uploaded_file, sep=";")
+        dataframe = pd.read_csv(uploaded_file)
     except:
-        raise AttributeError("Data in wrong format: Check file-format (.csv) and separator (;)")
+        raise AttributeError("Data in wrong format: Check file-format (.csv) and separator (,)")
          
     #Check column names to derive attributes
     col_names = dataframe.columns.values

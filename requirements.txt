@@ -1,5 +1,5 @@
 streamlit
-mode-behave>=1.0.6
+mode-behave>=1.0.10
 matplotlib>=3.5.1
 numba>=0.55.1
 numpy>=1.21.5
